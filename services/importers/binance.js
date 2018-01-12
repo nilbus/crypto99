@@ -96,8 +96,13 @@ module.exports = function (app) {
     }
   };
 
+  const tradeCount = async () => {
+    return await app.pg.query('select count(*) as trade_count from binance_trades_xrp_btc');
+  };
+
   return {
-    runbackfill
+    runbackfill,
+    tradeCount
   };
 };
 
