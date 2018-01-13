@@ -82,6 +82,7 @@ module.exports = function (app) {
       }));
 
       values.shift(); //remove the fromId, because it already exists in the db
+      if(values.length < 100) clearInterval(this.intervalId);
 
       const columns = ['binance_trade_id', 'price', 'quantity', 'trade_time', 'buyer_was_maker', 'was_best_match'];
       const tableName = this.tableName;
