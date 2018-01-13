@@ -1,12 +1,12 @@
 module.exports = {
   postgres: {
-    connectionString: 'postgres://ugprhgyhqqwbvf:90082e4317b96e7d9d6323f9ccdc39a592adab255f6cbc407f87e8d7477f64c7@ec2-54-235-148-19.compute-1.amazonaws.com:5432/dcicgm0iersp1g',
+    connectionString: 'postgres://ubcek98rdetpbo:pca4ce03d645cacd0aadf3483ffd5912dd3c1cff142c6260d048f814317afe3b8@ec2-50-16-154-189.compute-1.amazonaws.com:5432/d22v30bg3h32pp',
     connectionObject: {
-      host: 'ec2-54-235-148-19.compute-1.amazonaws.com',
-      database: 'dcicgm0iersp1g',
-      user: 'ugprhgyhqqwbvf',
+      host: 'ec2-50-16-154-189.compute-1.amazonaws.com',
+      database: 'd22v30bg3h32pp',
+      user: 'ubcek98rdetpbo',
       port: 5432,
-      password: '90082e4317b96e7d9d6323f9ccdc39a592adab255f6cbc407f87e8d7477f64c7',
+      password: 'pca4ce03d645cacd0aadf3483ffd5912dd3c1cff142c6260d048f814317afe3b8',
       //max and min pool connections
       max: 20,
       min: 1,
