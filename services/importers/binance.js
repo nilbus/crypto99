@@ -1,11 +1,10 @@
 const apiClient = require('../../lib/apiClient');
 module.exports = function (app) {
 
-  const runbackfill = (inputs) => {
+  const runBackfill = (inputs) => {
     console.log('inputs: ', inputs);
     let {symbol} = inputs;
-    //symbol should come in as abc_def
-    symbol = symbol.replace('_', '').toUpperCase();
+
     const backFiller = new Backfiller(symbol);
     backFiller.run();
     return {success: true};
@@ -15,10 +14,13 @@ module.exports = function (app) {
   //1509635159000 <- 4 minutes later
 
   const Backfiller = class Backfill {
-    constructor() {
+    constructor(symbol) {
       this.failCount = 0;
       this.startId = null;
       this.maxFailCount = 4;
+      this.tableName = `binance_trades_${symbol}`;
+      //symbol should come in as abc_def
+      this.symbol = symbol.replace('_', '').toUpperCase();
     }
 
     async run() {
@@ -29,12 +31,17 @@ module.exports = function (app) {
     async getStartId() {
       //check this.startID first. That should be valid. If not, check database.
       // if nothing in db, query some endpoint at binance to find the first transaction to start with
-      const result = await app.pg.query(`
+      let result;
+      try {
+        result = await app.pg.query(`
         select binance_trade_id
-        from binance_trades_xrp_btc
+        from $[tradeTable:name]
         order by binance_trade_id desc
         limit 1 
-      `);
+      `, {tradeTable: this.tableName});
+      } catch(err) {
+        console.log('error in getting latest trade from trades table:', err);
+      }
       const proposedStartId = result[0] && result[0].binance_trade_id;
       if (proposedStartId) {
         console.log('retrieved start id: ', proposedStartId);
@@ -77,7 +84,7 @@ module.exports = function (app) {
       values.shift(); //remove the fromId, because it already exists in the db
 
       const columns = ['binance_trade_id', 'price', 'quantity', 'trade_time', 'buyer_was_maker', 'was_best_match'];
-      const tableName = 'binance_trades_xrp_btc';
+      const tableName = this.tableName;
       let query = app.pgPromise.helpers.insert(values, columns, tableName);
       query += ' returning binance_trade_id';
 
@@ -101,7 +108,7 @@ module.exports = function (app) {
   };
 
   return {
-    runbackfill,
+    runBackfill,
     tradeCount
   };
 };

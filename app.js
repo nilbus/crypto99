@@ -15,5 +15,11 @@ app.use(bodyParser.json());
 routeMgmt(app);
 app.mount('/importers', importers(app));
 
-const port = process.env.PORT || 3000;
+app.use(express.static(__dirname + '/react-app/build'));
+
+// app.get('/', function (req, res) {
+//   res.sendFile(__dirname + '/react-app/build/index.html');
+// });
+
+const port = process.env.PORT || 7000;
 app.listen(port, () => console.log('server listening on port ', port));
