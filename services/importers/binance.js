@@ -1,5 +1,8 @@
 const apiClient = require('../../lib/apiClient');
+const email = require('../emailer');
+
 module.exports = function (app) {
+  const emailer = email(app);
 
   const runBackfill = (inputs) => {
     console.log('inputs: ', inputs);
@@ -41,6 +44,7 @@ module.exports = function (app) {
       `, {tradeTable: this.tableName});
       } catch(err) {
         console.log('error in getting latest trade from trades table:', err);
+        this.recordError(err);
       }
       const proposedStartId = result[0] && result[0].binance_trade_id;
       if (proposedStartId) {
@@ -56,6 +60,18 @@ module.exports = function (app) {
     }
 
     async getAndSaveTransactions() {
+      const binanceResponse = await this.getBinanceTrades();
+      const values = this.formatTradeData(binanceResponse);
+
+      if(values.length < 100) {
+        clearInterval(this.intervalId);
+        emailer({subject: this.symbol + ' finished', message: this.symbol + ' currency pair data importing is up to date'});
+      }
+
+      await this.saveTradeData(values);
+    }
+
+    async getBinanceTrades() {
       let binanceResponse;
       try {
         console.log('getting trades, starting from and including id: ', this.startId);
@@ -68,10 +84,13 @@ module.exports = function (app) {
         console.log('request to get transactions from binance failed at id: ', this.startId, ' error: ', err);
         this.failCount += 1;
         if (this.failCount >= this.maxFailCount) clearInterval(this.intervalId);
-        // await this.recordLogs(err);
-      }
 
-      /* SAVE DATA */
+        this.recordError(err);
+      }
+      return binanceResponse;
+    }
+
+    formatTradeData(binanceResponse) {
       const values = binanceResponse.body.map((trade, index) => ({
         binance_trade_id: trade.a,
         price: parseFloat(trade.p),
@@ -82,8 +101,10 @@ module.exports = function (app) {
       }));
 
       values.shift(); //remove the fromId, because it already exists in the db
-      if(values.length < 100) clearInterval(this.intervalId);
+      return values;
+    }
 
+    async saveTradeData(values) {
       const columns = ['binance_trade_id', 'price', 'quantity', 'trade_time', 'buyer_was_maker', 'was_best_match'];
       const tableName = this.tableName;
       let query = app.pgPromise.helpers.insert(values, columns, tableName);
@@ -98,14 +119,18 @@ module.exports = function (app) {
         console.log('something went wrong saving the trades received from binance', err);
         this.failCount += 1;
         if (this.failCount >= this.maxFailCount) clearInterval(this.intervalId);
-        // await this.recordLogs(err);
+        this.recordError(err);
       }
+    }
 
+    recordError(error) {
+      emailer.send({subject: 'Binance Importer Error', message: error.stack});
     }
   };
 
-  const tradeCount = async () => {
-    return await app.pg.query('select count(*) as trade_count from binance_trades_xrp_btc');
+  const tradeCount = async (input) => {
+    const tableName = 'binance_trades_' + input.symbol;
+    return await app.pg.query('select count(*) as trade_count from $[tableName:name]', {tableName});
   };
 
   return {
