@@ -33,3 +33,12 @@ create table binance_trades_trx_btc (
     buyer_was_maker boolean,
     was_best_match boolean
 )
+
+create table binance_trades_adx_btc (
+     binance_trade_id integer unique primary key,
+     price numeric,
+     quantity numeric,
+     trade_time timestamp with time zone,
+     buyer_was_maker boolean,
+     was_best_match boolean
+ )

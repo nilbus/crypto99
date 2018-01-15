@@ -20,7 +20,7 @@ module.exports = function (app) {
     constructor(symbol) {
       this.failCount = 0;
       this.startId = null;
-      this.maxFailCount = 4;
+      this.maxFailCount = 1;
       this.tableName = `binance_trades_${symbol}`;
       //symbol should come in as abc_def
       this.symbol = symbol.replace('_', '').toUpperCase();
@@ -80,6 +80,11 @@ module.exports = function (app) {
           //.query({ symbol: 'XRPBTC', startTime: 1509634919000, endTime: 1509635159000});
           //start id for ripple 1294
           .query({ symbol: 'XRPBTC', fromId: this.startId});
+        console.log('binance response: ', binanceResponse.statusCode, binanceResponse.status, binanceResponse.statusType);
+        const { statusCode, status, statusType } = binanceResponse;
+        if (statusCode >= 400 || status >= 400 || statusType === 4 || statusCode !== 200 || status !== 200 || statusType !== 2) {
+          throw new Error('status code was above 400');
+        }
       } catch(err) {
         console.log('request to get transactions from binance failed at id: ', this.startId, ' error: ', err);
         this.failCount += 1;
