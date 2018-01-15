@@ -28,7 +28,7 @@ module.exports = function (app) {
 
     async run() {
       await this.getStartId();
-      this.intervalId = setInterval(this.getAndSaveTransactions.bind(this), 2000);
+      this.intervalId = setInterval(this.getAndSaveTransactions.bind(this), 3000);
     }
 
     async getStartId() {
