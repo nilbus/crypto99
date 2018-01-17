@@ -15,6 +15,7 @@
     "cookie-parser": "^1.4.3",
     "express": "^4.16.2",
     "pg-promise": "^7.3.2",
+    "socket.io": "^2.0.4",
     "superagent": "^3.8.2"
   }
 }

@@ -37,11 +37,11 @@ module.exports = function (app) {
       let result;
       try {
         result = await app.pg.query(`
-        select binance_trade_id
-        from $[tradeTable:name]
-        order by binance_trade_id desc
-        limit 1 
-      `, {tradeTable: this.tableName});
+          select binance_trade_id
+          from $[tradeTable:name]
+          order by binance_trade_id desc
+          limit 1 
+        `, {tradeTable: this.tableName});
       } catch(err) {
         console.log('error in getting latest trade from trades table:', err);
         this.recordError(err);
@@ -65,7 +65,7 @@ module.exports = function (app) {
 
       if(values.length < 100) {
         clearInterval(this.intervalId);
-        emailer({subject: this.symbol + ' finished', message: this.symbol + ' currency pair data importing is up to date'});
+        emailer.send({subject: this.symbol + ' finished', message: this.symbol + ' currency pair data importing is up to date'});
       }
 
       await this.saveTradeData(values);
