@@ -35,7 +35,7 @@ module.exports = (app) => {
           returning currency_pair_id
         `, {symbol, tradeTable, exchange});
 
-        currencyPairId = result[0].currency_pair_id;
+        currencyPairId = result.currency_pair_id;
       });
 
     } catch(err) {
