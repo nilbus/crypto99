@@ -6,6 +6,7 @@ const routeMgmt = require('./lib/routeManagement');
 const importers = require('./services/importers');
 const emailer = require('./services/emailer');
 const currencyPairs = require('./services/currencyPairs');
+const download = require('./services/download');
 
 const app = express();
 // adds the pg and pgp object to app
@@ -16,8 +17,9 @@ app.use(bodyParser.json());
 
 routeMgmt(app);
 app.mount('/importers', importers(app));
-app.mount('/emailer', emailer(app));
+// app.mount('/emailer', emailer(app));
 app.mount('/currencyPairs', currencyPairs(app));
+app.mount('/download', download(app));
 
 app.use(express.static(__dirname + '/react-app/build'));
 

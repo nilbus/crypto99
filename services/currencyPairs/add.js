@@ -10,7 +10,7 @@ module.exports = (app) => {
       return {success: false, message: 'invalid symbol name'};
     }
     const result = app.pg.query(`
-        select id from currency_pairs where symbol=$[symbol]
+        select currency_pair_id from currency_pairs where symbol=$[symbol]
       `, {symbol});
     if (result[0]) return { success: false, message: 'currency pair ' + symbol + ' already exists' };
 
@@ -35,17 +35,15 @@ module.exports = (app) => {
           returning currency_pair_id
         `, {symbol, tradeTable, exchange});
 
-        return result;
+        currencyPairId = result[0].currency_pair_id;
       });
 
     } catch(err) {
-      console.log('could not add symbol: ' + symbol);
+      console.log('could not add symbol: ' + symbol, 'error: ', err);
       return {success: false, message: 'could not add symbol: ' + symbol};
     }
 
-
-
-
+    return {currencyPairId};
   };
 
   const validateSymbol = (symbol) => {
