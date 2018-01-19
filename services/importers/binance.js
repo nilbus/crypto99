@@ -22,7 +22,7 @@ module.exports = function (app) {
       this.startId = null;
       this.maxFailCount = 1;
       this.tableName = `binance_trades_${symbol}`;
-      //symbol should come in as abc_def
+      //symbol should come in as abc_def and binance wants it ABCDEF
       this.symbol = symbol.replace('_', '').toUpperCase();
     }
 
