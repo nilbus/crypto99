@@ -17,9 +17,9 @@ app.use(bodyParser.json());
 
 routeMgmt(app);
 const dataStreamsAPI = dataStreams(app);
-if (process.NODE_ENV === 'production' && false) {
-  dataStreamsAPI.binance.initiateSockets().then(()=> console.log('websockets started app.js'));
-}
+const nodeEnv = process.NODE_ENV === 'production';
+if (true) dataStreamsAPI.binance.initiateSockets()
+  .then(()=> console.log('websockets started app.js'));
 
 app.mount('/importers', importers(app));
 // app.mount('/emailer', emailer(app));

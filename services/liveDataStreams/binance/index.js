@@ -1,11 +1,15 @@
 const WebSocket = require('ws');
 const EventEmitter = require('events');
+const saveStreamData = require('./saveStreamData');
 
 module.exports = (app) => {
+  const SaveAggTradeStream = saveStreamData(app);
+
   class TradeEventEmitter extends EventEmitter {
     constructor() {
       super();
       this.messageHistory = [];
+      this.btcusdtHistory = [];
     }
 
     newTrade(message) {
@@ -14,14 +18,32 @@ module.exports = (app) => {
       if(found) return;
 
       this.messageHistory.push(message);
+      if (message.symbol === 'btc_usdt') {
+        this.handleNewUSDTTrade(message);
+        return;
+      }
+
       this.emit('aggTrade', message);
 
       const thirtySecondsAgo = message.data.T - 30000;
       this.messageHistory = this.messageHistory.filter(messageOld => messageOld.data.T > thirtySecondsAgo);
     }
+
+    handleNewUSDTTrade(message) {
+      const trade = message.data;
+      this.btcusdtHistory.push({
+        price: trade.p,
+        trade_time: trade.T,
+        binance_trade_id: trade.a
+      });
+      let fourDaysAgo = new Date();
+      fourDaysAgo.setDate(fourDaysAgo.getDate() - 5);
+      this.btcusdtHistory = this.btcusdtHistory.filter(trade => Date.parse(trade.trade_time) > fourDaysAgo)
+    }
   }
 
   app.tradeEvents = new TradeEventEmitter();
+  SaveAggTradeStream.listen();
 
   const restartSockets = async (input) => {
     app.tradeEvents.ws.terminate();
@@ -34,6 +56,10 @@ module.exports = (app) => {
      *  initiates a websocket connection to binance to receive real time trade data from all added currency pairs
      *  @params: currency_pair_id: Int || symbol: String
      */
+
+    if (!app.tradeEvents.btcusdtHistory.length) {
+      app.tradeEvents.btcusdtHistory = await getBTCUSDHistory();
+    }
 
     let symbols = await app.pg.query(`
       select symbol from currency_pairs
@@ -86,6 +112,38 @@ module.exports = (app) => {
     });
 
     return {success: true};
+  };
+
+  const getBTCUSDHistory = async () => {
+    try {
+      const result = await app.pg.query(`
+        select binance_trade_id, price, trade_time
+        from binance_trades_btc_usdt
+        where trade_time > NOW() - interval '4 days'
+        order by binance_trade_id asc
+      `);
+
+      let hasTradeGaps = false;
+      let tradeId = result && result.binance_trade_id;
+      for (let i = 0; i < result.length; i++) {
+        const trade = result[i];
+        if (trade.binance_trade_id !== tradeId) hasTradeGaps = true;
+        tradeId += 1;
+      }
+
+      if (hasTradeGaps || !result.length) {
+        app.canTrade = false;
+        return [];
+      }
+
+      return result;
+
+    } catch(err) {
+      console.log('there was an error getting btc_usdt price history. Err: ', err);
+      app.canTrade = false;
+      return [];
+    }
+
   };
 
   return {
