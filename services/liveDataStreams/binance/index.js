@@ -62,6 +62,7 @@ module.exports = (app) => {
       ws.on('open', () => {
         console.log('websocket connection is open');
         app.tradeEvents.ws = ws;
+        app.tradeEvents.emit('open', ws);
         // give some overlap to make sure new connection is receiving data before old one is closed
         if (input.oldWS) setTimeout(() => input.oldWS.terminate(), 5000);
         // 23 hours
@@ -72,10 +73,12 @@ module.exports = (app) => {
 
       ws.on('close', () => {
         console.log('ws was closed');
+        app.tradeEvents.emit('close', ws);
       });
 
       ws.on('error', (error) => {
         console.log('web socket error: ', error);
+        app.tradeEvents.emit('error', error);
         ws.close(403, 'because');
         ws.terminate();
         reject(error);

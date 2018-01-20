@@ -16,14 +16,15 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 routeMgmt(app);
+const dataStreamsAPI = dataStreams(app);
+if (process.NODE_ENV === 'production' && false) {
+  dataStreamsAPI.binance.initiateSockets().then(()=> console.log('websockets started app.js'));
+}
+
 app.mount('/importers', importers(app));
 // app.mount('/emailer', emailer(app));
 app.mount('/currencyPairs', currencyPairs(app));
 app.mount('/download', download(app));
-
-const dataStreamsAPI = dataStreams(app);
-
-dataStreamsAPI.binance.initiateSockets().then(()=> console.log('websockets started app.js'));
 
 app.use(express.static(__dirname + '/react-app/build'));
 

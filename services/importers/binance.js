@@ -79,7 +79,7 @@ module.exports = function (app) {
           .set('X-MBX-APIKEY', 'PEf7fV9hkdHDFUUgQRtVaRvmppVpPEArd93guOUmtezWIDJsdIv487yYPQWl1KUF')
           //.query({ symbol: 'XRPBTC', startTime: 1509634919000, endTime: 1509635159000});
           //start id for ripple 1294
-          .query({ symbol: 'XRPBTC', fromId: this.startId});
+          .query({ symbol: this.symbol, fromId: this.startId});
         console.log('binance response: ', binanceResponse.statusCode, binanceResponse.status, binanceResponse.statusType);
         const { statusCode, status, statusType } = binanceResponse;
         if (statusCode >= 400 || status >= 400 || statusType === 4 || statusCode !== 200 || status !== 200 || statusType !== 2) {
@@ -138,9 +138,29 @@ module.exports = function (app) {
     return await app.pg.query('select count(*) as trade_count from $[tableName:name]', {tableName});
   };
 
+  const testQuery = async (input) => {
+    let binanceResponse;
+    try {
+      binanceResponse = await apiClient.get('https://api.binance.com/api/v1/aggTrades')
+        .set('X-MBX-APIKEY', 'PEf7fV9hkdHDFUUgQRtVaRvmppVpPEArd93guOUmtezWIDJsdIv487yYPQWl1KUF')
+        //.query({ symbol: 'XRPBTC', startTime: 1509634919000, endTime: 1509635159000});
+        //start id for ripple 1294
+        .query({ symbol: input.symbol.replace('_', '').toUpperCase() || 'BTCUSDT', fromId: 1});
+      console.log('binance response: ', binanceResponse.statusCode, binanceResponse.status, binanceResponse.statusType);
+      const { statusCode, status, statusType } = binanceResponse;
+      if (statusCode >= 400 || status >= 400 || statusType === 4 || statusCode !== 200 || status !== 200 || statusType !== 2) {
+        throw new Error('status code was above 400');
+      }
+    } catch(err) {
+      console.log('request to get transactions from binance failed at id: ', 'test', ' error: ', err);
+    }
+    return binanceResponse;
+  };
+
   return {
     runBackfill,
-    tradeCount
+    tradeCount,
+    testQuery
   };
 };
 
