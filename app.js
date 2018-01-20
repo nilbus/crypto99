@@ -22,8 +22,8 @@ app.mount('/currencyPairs', currencyPairs(app));
 app.mount('/download', download(app));
 
 const dataStreamsAPI = dataStreams(app);
-console.log('datastreams api: ', dataStreamsAPI);
-dataStreamsAPI.binance.initiate();
+
+dataStreamsAPI.binance.initiateSockets().then(()=> console.log('websockets started app.js'));
 
 app.use(express.static(__dirname + '/react-app/build'));
 
