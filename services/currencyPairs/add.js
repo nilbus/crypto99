@@ -30,8 +30,8 @@ module.exports = (app) => {
         `, {tradeTable});
 
         const result = yield transaction.one(`
-          insert into currency_pairs (symbol, trade_table, exchange)
-          values ($[symbol], $[tradeTable], $[exchange])
+          insert into currency_pairs (symbol, trade_table, exchange, last_sequential_trade_id)
+          values ($[symbol], $[tradeTable], $[exchange], 0)
           returning currency_pair_id
         `, {symbol, tradeTable, exchange});
 

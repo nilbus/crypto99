@@ -113,12 +113,12 @@ module.exports = function (app) {
       const columns = ['binance_trade_id', 'price', 'quantity', 'trade_time', 'buyer_was_maker', 'was_best_match'];
       const tableName = this.tableName;
       let query = app.pgPromise.helpers.insert(values, columns, tableName);
-      query += ' returning binance_trade_id';
+      query += ' ON conflict DO nothing returning binance_trade_id';
 
       try {
         const result = await app.pg.any(query);
         const latestTrade = result[result.length - 1];
-        this.startId = latestTrade.binance_trade_id;
+        this.startId = latestTrade ? latestTrade.binance_trade_id : this.startId;
         console.log('saved ', result.length, ' trades from binance');
       } catch (err) {
         console.log('something went wrong saving the trades received from binance', err);

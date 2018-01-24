@@ -12,5 +12,6 @@ create table currency_pairs (
     currency_pair_id serial primary key,
     symbol text not null unique,
     trade_table text not null unique,
-    exchange text not null
+    exchange text not null,
+    last_sequential_trade_id integer default 0
 )

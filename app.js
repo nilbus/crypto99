@@ -14,23 +14,30 @@ db(app);
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-
 routeMgmt(app);
-const dataStreamsAPI = dataStreams(app);
-const nodeEnv = process.NODE_ENV === 'production';
-if (true) dataStreamsAPI.binance.initiateSockets()
-  .then(()=> console.log('websockets started app.js'));
 
-app.mount('/importers', importers(app));
-// app.mount('/emailer', emailer(app));
-app.mount('/currencyPairs', currencyPairs(app));
-app.mount('/download', download(app));
+const startUpSequence = async () => {
 
-app.use(express.static(__dirname + '/react-app/build'));
+  const dataStreamsAPI = dataStreams(app);
+  const nodeEnv = process.NODE_ENV === 'production';
+  if (nodeEnv || true) await dataStreamsAPI.binance.initiateSocket({symbols: ['btc_usdt'], name: 'usdWS'});
+  //slight delay for usd history to build a bit so new trades can be saved with usd data
+  setTimeout(() => dataStreamsAPI.binance.initiateSocket({name: 'allWS'}), 2000);
+
+  const importersAPI = importers(app);
+  await importersAPI.binance.backfillUSD();
+
+  app.mount('/currencyPairs', currencyPairs(app));
+  app.mount('/download', download(app));
+
+  app.use(express.static(__dirname + '/react-app/build'));
 
 // app.get('/', function (req, res) {
 //   res.sendFile(__dirname + '/react-app/build/index.html');
 // });
 
-const port = process.env.PORT || 7001;
-app.listen(port, () => console.log('server listening on port ', port));
+  const port = process.env.PORT || 7001;
+  app.listen(port, () => console.log('server listening on port ', port));
+};
+
+startUpSequence();

@@ -20,7 +20,8 @@ module.exports = (app) => {
       for (let i = 0; i < data.currencyList.length; i++) {
         const symbol = data.currencyList[i];
         const values = this.formatTradeData(data[symbol]);
-        const columns = ['binance_trade_id', 'price', 'quantity', 'trade_time', 'buyer_was_maker', 'was_best_match', 'usd_price'];
+        let columns = ['binance_trade_id', 'price', 'quantity', 'trade_time', 'buyer_was_maker', 'was_best_match', 'btc_usdt'];
+        if (symbol === 'btc_usdt') columns.pop();
         const tableName = 'binance_trades_' + symbol;
         let query = app.pgPromise.helpers.insert(values, columns, tableName);
         query += ' on conflict do nothing';
@@ -29,9 +30,10 @@ module.exports = (app) => {
       }
 
       try {
-        await db.tx(t1 => {
-          return this.batch(batch);
+        await app.pg.tx(transaction => {
+          return transaction.batch(batch);
         });
+        console.log('successfully saved queued data stream');
       } catch(err) {
         console.log('did not save aggTrade streamed data: ', err);
       }
@@ -49,7 +51,7 @@ module.exports = (app) => {
           trade_time: app.pgPromise.as.date(new Date(trade.T), false),
           buyer_was_maker: trade.m,
           was_best_match: trade.M,
-          usd_price: null
+          btc_usdt: null
         }
       });
     }
