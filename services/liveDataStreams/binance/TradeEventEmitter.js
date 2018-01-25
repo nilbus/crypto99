@@ -4,7 +4,7 @@ module.exports = class TradeEventEmitter extends EventEmitter {
   constructor() {
     super();
     this.messageHistory = [];
-    this.btcusdtHistory = [];
+    this.usdMessageHistory = [];
   }
 
   newTrade(message) {
@@ -27,12 +27,12 @@ module.exports = class TradeEventEmitter extends EventEmitter {
   }
 
   addUSDPriceToMessage(message) {
-    if (!this.btcusdtHistory.length) {
+    if (!this.usdMessageHistory.length) {
       console.log('usd history doesnt have any trades. Canceling event for this trade: ',
         message.symbol, 'id: ', message.data.a);
       return true;
     }
-    const lastUSDTrade = this.btcusdtHistory.pop();
+    const lastUSDTrade = this.usdMessageHistory[this.usdMessageHistory.length - 1];
     if (Math.abs(lastUSDTrade.data.T - message.data.T) > 30000) throw(30);
     message.data.btc_usdt = lastUSDTrade.price;
     return false;
@@ -45,17 +45,9 @@ module.exports = class TradeEventEmitter extends EventEmitter {
   }
 
   handleUSDHistory(message) {
-    const trade = message.data;
-    this.btcusdtHistory.push(message);
-
-    //   price: trade.p,
-    //     trade_time: trade.T,
-    //   binance_trade_id: trade.a
-
-    // sort ascending
-    this.btcusdtHistory.sort((a, b) => (a.a - b.a));
-
+    this.usdMessageHistory.push(message);
+    this.usdMessageHistory.sort((a, b) => (a.data.a - b.data.a));
     const someTimeAgo = Date.now() - 30000;
-    this.btcusdtHistory = this.btcusdtHistory.filter(trade => Date.parse(trade.trade_time) > someTimeAgo)
+    this.usdMessageHistory = this.usdMessageHistory.filter(messageHist => messageHist.data.T > someTimeAgo);
   }
 };

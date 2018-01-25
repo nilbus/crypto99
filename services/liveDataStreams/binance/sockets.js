@@ -15,10 +15,6 @@ module.exports = (app) => {
      *  @params: symbols: [String], name: String
      */
 
-    if (!app.tradeEvents.btcusdtHistory.length) {
-      app.tradeEvents.btcusdtHistory = await getBTCUSDHistory();
-    }
-
     let symbols = input.symbols;
     if (!symbols) {
       symbols = await app.pg.query(`

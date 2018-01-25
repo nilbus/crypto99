@@ -25,7 +25,7 @@ const startUpSequence = async () => {
   setTimeout(() => dataStreamsAPI.binance.initiateSocket({name: 'allWS'}), 2000);
 
   const importersAPI = importers(app);
-  await importersAPI.binance.backfillUSD();
+  app.mount('/importers', importersAPI);
 
   app.mount('/currencyPairs', currencyPairs(app));
   app.mount('/download', download(app));

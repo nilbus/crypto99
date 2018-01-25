@@ -5,7 +5,6 @@ module.exports = (app) => {
 
   return {
     binance: binance(app),
-    status: backFillManager(app),
-    backfillUSD: backfillUSD(app)
+    status: backFillManager(app)
   }
 };
