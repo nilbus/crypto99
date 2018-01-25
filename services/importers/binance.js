@@ -5,7 +5,7 @@ module.exports = function (app) {
   const emailer = email(app);
 
   const runBackfill = (inputs) => {
-    console.log('inputs: ', inputs);
+    // @params symbol: String
     let {symbol} = inputs;
 
     const backFiller = new Backfiller(symbol);
@@ -17,16 +17,23 @@ module.exports = function (app) {
   //1509635159000 <- 4 minutes later
 
   const Backfiller = class Backfill {
+
     constructor(symbol) {
       this.failCount = 0;
-      this.startId = null;
       this.maxFailCount = 1;
+      this.saveFailCount = 0;
+      this.maxSaveFailCount = 15;
+      this.startId = null;
+      this.lastSequentialTradeId = 0;
+
       this.tableName = `binance_trades_${symbol}`;
+      this.symbol = symbol;
       //symbol should come in as abc_def and binance wants it ABCDEF
-      this.symbol = symbol.replace('_', '').toUpperCase();
+      this.symbolForRequest = symbol.replace('_', '').toUpperCase();
     }
 
     async run() {
+      //
       await this.getStartId();
       this.intervalId = setInterval(this.getAndSaveTransactions.bind(this), 3000);
     }
@@ -37,38 +44,36 @@ module.exports = function (app) {
       let result;
       try {
         result = await app.pg.query(`
-          select binance_trade_id
-          from $[tradeTable:name]
-          order by binance_trade_id desc
-          limit 1 
-        `, {tradeTable: this.tableName});
+          select last_sequential_trade_id 
+          from currency_pairs 
+          where symbol = $[symbol]
+        `, {symbol: this.symbol});
       } catch(err) {
-        console.log('error in getting latest trade from trades table:', err);
+        console.log('error in getting start ID for the binance importer:', err);
+        clearInterval(this.intervalId);
         this.recordError(err);
       }
-      const proposedStartId = result[0] && result[0].binance_trade_id;
-      if (proposedStartId) {
-        console.log('retrieved start id: ', proposedStartId);
-        this.startId = proposedStartId;
-      } else {
-        //query binance for the first trade id. for now use xrp default
-        console.log('setting start trade id: ', 1);
-        this.startId = 1;
-        //1294
+      const proposedStartId = result[0] && result[0].last_sequential_trade_id;
 
-      }
+      this.startId = proposedStartId || 1;
+      console.log('starting with id: ', this.startId, 'for binance importer');
     }
 
     async getAndSaveTransactions() {
       const binanceResponse = await this.getBinanceTrades();
       const values = this.formatTradeData(binanceResponse);
 
-      if(values.length < 100) {
+      if(values.length < 400) {
         clearInterval(this.intervalId);
+        if (this.symbol === 'btc_usdt') this.updateUSDStatus();
         emailer.send({subject: this.symbol + ' finished', message: this.symbol + ' currency pair data importing is up to date'});
       }
 
       await this.saveTradeData(values);
+    }
+
+    updateUSDStatus() {
+      console.log('need to write query to update usd btc status');
     }
 
     async getBinanceTrades() {
@@ -77,13 +82,12 @@ module.exports = function (app) {
         console.log('getting trades, starting from and including id: ', this.startId);
         binanceResponse = await apiClient.get('https://api.binance.com/api/v1/aggTrades')
           .set('X-MBX-APIKEY', 'PEf7fV9hkdHDFUUgQRtVaRvmppVpPEArd93guOUmtezWIDJsdIv487yYPQWl1KUF')
-          //.query({ symbol: 'XRPBTC', startTime: 1509634919000, endTime: 1509635159000});
-          //start id for ripple 1294
-          .query({ symbol: this.symbol, fromId: this.startId});
-        console.log('binance response: ', binanceResponse.statusCode, binanceResponse.status, binanceResponse.statusType);
+          .query({ symbol: this.symbolForRequest, fromId: this.startId});
+
         const { statusCode, status, statusType } = binanceResponse;
         if (statusCode >= 400 || status >= 400 || statusType === 4 || statusCode !== 200 || status !== 200 || statusType !== 2) {
-          throw new Error('status code was above 400');
+          console.log('binance response: ', binanceResponse);
+          throw new Error('status code was above 400. Response: ');
         }
       } catch(err) {
         console.log('request to get transactions from binance failed at id: ', this.startId, ' error: ', err);
@@ -117,13 +121,13 @@ module.exports = function (app) {
 
       try {
         const result = await app.pg.any(query);
-        const latestTrade = result[result.length - 1];
-        this.startId = latestTrade ? latestTrade.binance_trade_id : this.startId;
-        console.log('saved ', result.length, ' trades from binance');
+
+        this.startId = values.reduce((num, trade) => Math.max(num, trade.binance_trade_id, this.lastSequentialTradeId), this.startId);
+        console.log('saved ', result.length, ' trades from binance. Total response from binance: ', values.length);
       } catch (err) {
         console.log('something went wrong saving the trades received from binance', err);
-        this.failCount += 1;
-        if (this.failCount >= this.maxFailCount) clearInterval(this.intervalId);
+        this.saveFailCount += 1;
+        if (this.saveFailCount >= this.maxSaveFailCount) clearInterval(this.intervalId);
         this.recordError(err);
       }
     }
@@ -133,34 +137,10 @@ module.exports = function (app) {
     }
   };
 
-  const tradeCount = async (input) => {
-    const tableName = 'binance_trades_' + input.symbol;
-    return await app.pg.query('select count(*) as trade_count from $[tableName:name]', {tableName});
-  };
 
-  const testQuery = async (input) => {
-    let binanceResponse;
-    try {
-      binanceResponse = await apiClient.get('https://api.binance.com/api/v1/aggTrades')
-        .set('X-MBX-APIKEY', 'PEf7fV9hkdHDFUUgQRtVaRvmppVpPEArd93guOUmtezWIDJsdIv487yYPQWl1KUF')
-        //.query({ symbol: 'XRPBTC', startTime: 1509634919000, endTime: 1509635159000});
-        //start id for ripple 1294
-        .query({ symbol: input.symbol.replace('_', '').toUpperCase() || 'BTCUSDT', fromId: 1});
-      console.log('binance response: ', binanceResponse.statusCode, binanceResponse.status, binanceResponse.statusType);
-      const { statusCode, status, statusType } = binanceResponse;
-      if (statusCode >= 400 || status >= 400 || statusType === 4 || statusCode !== 200 || status !== 200 || statusType !== 2) {
-        throw new Error('status code was above 400');
-      }
-    } catch(err) {
-      console.log('request to get transactions from binance failed at id: ', 'test', ' error: ', err);
-    }
-    return binanceResponse;
-  };
 
   return {
-    runBackfill,
-    tradeCount,
-    testQuery
+    runBackfill
   };
 };
 

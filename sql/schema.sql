@@ -13,5 +13,5 @@ create table currency_pairs (
     symbol text not null unique,
     trade_table text not null unique,
     exchange text not null,
-    last_sequential_trade_id integer default 0
+    last_sequential_trade_id integer default 1
 )

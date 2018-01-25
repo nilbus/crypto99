@@ -19,12 +19,16 @@ routeMgmt(app);
 const startUpSequence = async () => {
 
   const dataStreamsAPI = dataStreams(app);
+  const importersAPI = importers(app);
+
   const nodeEnv = process.NODE_ENV === 'production';
   if (nodeEnv || true) await dataStreamsAPI.binance.initiateSocket({symbols: ['btc_usdt'], name: 'usdWS'});
   //slight delay for usd history to build a bit so new trades can be saved with usd data
-  setTimeout(() => dataStreamsAPI.binance.initiateSocket({name: 'allWS'}), 2000);
+  setTimeout(() => {
+    dataStreamsAPI.binance.initiateSocket({name: 'allWS'});
+    importersAPI.binance.runBackfill({symbol: 'btc_usdt'});
+  }, 2000);
 
-  const importersAPI = importers(app);
   app.mount('/importers', importersAPI);
 
   app.mount('/currencyPairs', currencyPairs(app));
