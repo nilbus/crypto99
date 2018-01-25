@@ -98,19 +98,6 @@ module.exports = (app) => {
         order by binance_trade_id asc
       `);
 
-      let hasTradeGaps = false;
-      let tradeId = result && result.binance_trade_id;
-      for (let i = 0; i < result.length; i++) {
-        const trade = result[i];
-        if (trade.binance_trade_id !== tradeId) hasTradeGaps = true;
-        tradeId += 1;
-      }
-
-      if (hasTradeGaps || !result.length) {
-        app.canTrade = false;
-        return [];
-      }
-
       return result;
 
     } catch(err) {

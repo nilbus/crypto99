@@ -8,6 +8,7 @@ const emailer = require('./services/emailer');
 const currencyPairs = require('./services/currencyPairs');
 const download = require('./services/download');
 const dataStreams = require('./services/liveDataStreams');
+const dataScanner = require('./services/status/dataScanner');
 const app = express();
 // adds the pg and pgp object to app
 db(app);
@@ -15,6 +16,8 @@ app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 routeMgmt(app);
+
+dataScanner(app)({symbol: 'btc_usdt'});
 
 const startUpSequence = async () => {
 
@@ -44,4 +47,4 @@ const startUpSequence = async () => {
   app.listen(port, () => console.log('server listening on port ', port));
 };
 
-startUpSequence();
+//startUpSequence();
