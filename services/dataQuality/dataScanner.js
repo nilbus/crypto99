@@ -15,10 +15,10 @@ module.exports = (app) => {
     const mostCurrentTradeId = mostCurrent[0].binance_trade_id;
 
     const lastSequential = await app.pg.query(`
-    select last_sequential_trade_id
-    from currency_pairs
-    where symbol = $[symbol]
-  `, {symbol});
+      select last_sequential_trade_id
+      from currency_pairs
+      where symbol = $[symbol]
+    `, {symbol});
 
     let lastSequentialTradeId = lastSequential[0].last_sequential_trade_id;
 
@@ -32,12 +32,12 @@ module.exports = (app) => {
       `, {tradesTable, lastSequentialTradeId, endRange});
 
       const tradeGapStartId = findTradeGap(idRange.map(trade => trade.binance_trade_id));
-
+      console.log('DATA SCANNER find trade gap result: ', tradeGapStartId);
       if (tradeGapStartId) {
         try{
           await saveLastSequentialId(symbol, tradeGapStartId);
         } catch(err) {
-          console.log('could not update last seq trade id: ', err);
+          console.log('DATA SCANNER could not update last seq trade id: ', err);
           return {lastSequentialTradeId};
         }
         return {lastSequentialTradeId: tradeGapStartId};
@@ -45,13 +45,15 @@ module.exports = (app) => {
 
 
       lastSequentialTradeId = endRange;
-      await saveLastSequentialId(symbol, lastSequentialTradeId)
-
+      await saveLastSequentialId(symbol, Math.min(lastSequentialTradeId, mostCurrentTradeId))
     }
+
+    return {lastSequentialTradeId: mostCurrentTradeId};
   };
 
 
   const saveLastSequentialId = async(symbol, tradeId) => {
+    console.log('DATA SCANNER save new sequential trade Id: ', tradeId);
     await app.pg.query(`
       update currency_pairs
       set last_sequential_trade_id = $[tradeId]

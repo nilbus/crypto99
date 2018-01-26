@@ -8,7 +8,8 @@ const emailer = require('./services/emailer');
 const currencyPairs = require('./services/currencyPairs');
 const download = require('./services/download');
 const dataStreams = require('./services/liveDataStreams');
-const dataScanner = require('./services/status/dataScanner');
+const dataScanner = require('./services/dataQuality/dataScanner');
+const systemEvents = require('./services/systemEvents');
 const app = express();
 // adds the pg and pgp object to app
 db(app);
@@ -16,8 +17,10 @@ app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 routeMgmt(app);
+app.systemEvents = systemEvents(app);
 
-dataScanner(app)({symbol: 'btc_usdt'});
+dataScanner(app)({symbol: 'btc_usdt'})
+  .then(result=> console.log('data scanner result: ', result));
 
 const startUpSequence = async () => {
 

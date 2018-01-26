@@ -9,7 +9,8 @@ module.exports = class TradeEventEmitter extends EventEmitter {
 
   newTrade(message) {
     //if this message was received by another socket connection, don't emit it a second time
-    const found = this.messageHistory.find(messageOld => messageOld.data.a === message.data.a);
+    let found = this.messageHistory.find(old => old.data.a === message.data.a);
+    if (message.symbol === 'btc_usdt') found = this.usdMessageHistory.find(old => old.data.a === message.data.a);
     if(found) return;
 
     if (message.symbol !== 'btc_usdt') {

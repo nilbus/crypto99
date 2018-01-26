@@ -1,8 +1,10 @@
 const apiClient = require('../../lib/apiClient');
 const email = require('../emailer');
+const dataScanner = require('../dataQuality/dataScanner');
 
 module.exports = function (app) {
   const emailer = email(app);
+  const scanData = dataScanner(app);
 
   const runBackfill = (inputs) => {
     // @params symbol: String
@@ -100,7 +102,7 @@ module.exports = function (app) {
     }
 
     formatTradeData(binanceResponse) {
-      const values = binanceResponse.body.map((trade, index) => ({
+      return binanceResponse.body.map((trade, index) => ({
         binance_trade_id: trade.a,
         price: parseFloat(trade.p),
         quantity: parseFloat(trade.q),
@@ -108,9 +110,6 @@ module.exports = function (app) {
         buyer_was_maker: trade.m,
         was_best_match: trade.M
       }));
-
-      values.shift(); //remove the fromId, because it already exists in the db
-      return values;
     }
 
     async saveTradeData(values) {
@@ -124,6 +123,7 @@ module.exports = function (app) {
 
         this.startId = values.reduce((num, trade) => Math.max(num, trade.binance_trade_id, this.lastSequentialTradeId), this.startId);
         console.log('saved ', result.length, ' trades from binance. Total response from binance: ', values.length);
+        app.systemEvents.emit('importers/binance_saveTradeData', values);
       } catch (err) {
         console.log('something went wrong saving the trades received from binance', err);
         this.saveFailCount += 1;
