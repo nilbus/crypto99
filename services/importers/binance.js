@@ -1,10 +1,8 @@
 const apiClient = require('../../lib/apiClient');
 const email = require('../emailer');
-const dataScanner = require('../dataQuality/dataScanner');
 
 module.exports = function (app) {
   const emailer = email(app);
-  const scanData = dataScanner(app);
 
   const runBackfill = (inputs) => {
     // @params symbol: String
@@ -35,9 +33,14 @@ module.exports = function (app) {
     }
 
     async run() {
-      //
+      app.systemEvents.on('dataQuality/dataScanner_savedLastSequentialId', this.onNewLastSequentialId.bind(this));
       await this.getStartId();
       this.intervalId = setInterval(this.getAndSaveTransactions.bind(this), 3000);
+    }
+
+    onNewLastSequentialId(symbol, tradeId) {
+      console.log('IMPORTER: receieved new trade id from the scanner');
+      if (symbol === this.symbol) this.lastSequentialTradeId = tradeId;
     }
 
     async getStartId() {
@@ -123,7 +126,7 @@ module.exports = function (app) {
 
         this.startId = values.reduce((num, trade) => Math.max(num, trade.binance_trade_id, this.lastSequentialTradeId), this.startId);
         console.log('saved ', result.length, ' trades from binance. Total response from binance: ', values.length);
-        app.systemEvents.emit('importers/binance_saveTradeData', values);
+        app.systemEvents.emit('importers/binance_saveTradeData', this.symbol, values);
       } catch (err) {
         console.log('something went wrong saving the trades received from binance', err);
         this.saveFailCount += 1;

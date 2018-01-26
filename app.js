@@ -8,7 +8,7 @@ const emailer = require('./services/emailer');
 const currencyPairs = require('./services/currencyPairs');
 const download = require('./services/download');
 const dataStreams = require('./services/liveDataStreams');
-const dataScanner = require('./services/dataQuality/dataScanner');
+const dataQuality = require('./services/dataQuality');
 const systemEvents = require('./services/systemEvents');
 const app = express();
 // adds the pg and pgp object to app
@@ -19,8 +19,9 @@ app.use(bodyParser.json());
 routeMgmt(app);
 app.systemEvents = systemEvents(app);
 
-dataScanner(app)({symbol: 'btc_usdt'})
-  .then(result=> console.log('data scanner result: ', result));
+const DataQualityMgr = dataQuality(app).DataQualityManager;
+const dataQualityMgr = new DataQualityMgr();
+dataQualityMgr.listenForSavedData();
 
 const startUpSequence = async () => {
 
@@ -28,12 +29,12 @@ const startUpSequence = async () => {
   const importersAPI = importers(app);
 
   const nodeEnv = process.NODE_ENV === 'production';
-  if (nodeEnv || true) await dataStreamsAPI.binance.initiateSocket({symbols: ['btc_usdt'], name: 'usdWS'});
-  //slight delay for usd history to build a bit so new trades can be saved with usd data
-  setTimeout(() => {
-    dataStreamsAPI.binance.initiateSocket({name: 'allWS'});
-    importersAPI.binance.runBackfill({symbol: 'btc_usdt'});
-  }, 2000);
+  if (nodeEnv) {
+    await dataStreamsAPI.binance.initiateSocket({symbols: ['btc_usdt'], name: 'usdWS'});
+    await dataStreamsAPI.binance.initiateSocket({name: 'allWS'});
+  }
+
+  importersAPI.binance.runBackfill({symbol: 'xrp_btc'});
 
   app.mount('/importers', importersAPI);
 
@@ -50,4 +51,4 @@ const startUpSequence = async () => {
   app.listen(port, () => console.log('server listening on port ', port));
 };
 
-//startUpSequence();
+startUpSequence();

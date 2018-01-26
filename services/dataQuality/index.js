@@ -1,10 +1,10 @@
 const dataScanner = require('./dataScanner');
-const dataQualityManager = require('./dataQualityManager');
+const DataQualityManager = require('./dataQualityManager');
 
 module.exports = (app) => {
 
   return {
    dataScanner: dataScanner(app),
-   dataQualityManager: dataQualityManager(app)
+   DataQualityManager: DataQualityManager(app)
   }
 };

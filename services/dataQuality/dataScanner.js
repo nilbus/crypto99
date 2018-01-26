@@ -1,6 +1,7 @@
 module.exports = (app) => {
 
   const dataScanner = async (inputs) => {
+    // @params symbol: String
     console.log('in scanner');
     const {symbol} = inputs;
     const tradesTable = 'binance_trades_' + symbol;
@@ -58,7 +59,9 @@ module.exports = (app) => {
       update currency_pairs
       set last_sequential_trade_id = $[tradeId]
       where symbol = $[symbol]
-    `, {tradeId, symbol})
+    `, {tradeId, symbol});
+
+    app.systemEvents.emit('dataQuality/dataScanner_savedLastSequentialId', symbol, tradeId);
   };
 
   const findTradeGap = (idList) => {
