@@ -116,13 +116,19 @@ module.exports = function (app) {
     }
 
     async saveTradeData(values) {
+
+      //todo: add the usd price calculation to the query. if the query is too slow, add a values queue so more can be saved at one time
+      //todo: OR kick off a usd calculation query every time trades are saved. have a queue of limit 1 so that when the backfiller turns
+      //todo: off the query runs at least one more time
       const columns = ['binance_trade_id', 'price', 'quantity', 'trade_time', 'buyer_was_maker', 'was_best_match'];
       const tableName = this.tableName;
       let query = app.pgPromise.helpers.insert(values, columns, tableName);
       query += ' ON conflict DO nothing returning binance_trade_id';
 
       try {
+        console.time('save import trade data');
         const result = await app.pg.any(query);
+        console.timeEnd('save import trade data');
 
         this.startId = values.reduce((num, trade) => Math.max(num, trade.binance_trade_id, this.lastSequentialTradeId), this.startId);
         console.log('saved ', result.length, ' trades from binance. Total response from binance: ', values.length);
@@ -140,10 +146,44 @@ module.exports = function (app) {
     }
   };
 
+  const updateUSDPrice = async (symbol) => {
+    if (symbol === 'btc_usdt') return;
 
+    let result;
+    try {
+      result = await app.pg.query(`
+      UPDATE binance_trades_eth_btc AS x_btc_outer
+      SET btc_usdt = converted.USD
+      FROM (
+          SELECT
+            x_btc.binance_trade_id,
+            x_btc.price x,
+            btc_usd.price btc_USD,
+            x_btc.price * btc_usd.price USD,
+            x_btc.trade_time - btc_usd.trade_time AS time_diff
+          FROM binance_trades_eth_btc AS x_btc
+          JOIN LATERAL (
+            SELECT price, trade_time
+            FROM binance_trades_btc_usdt AS btc_usd_inner
+            WHERE x_btc.trade_time > btc_usd_inner.trade_time
+            ORDER BY btc_usd_inner.trade_time DESC
+            LIMIT 1
+          ) AS btc_usd ON true
+          WHERE x_btc.btc_usdt is null
+      ) AS converted
+      WHERE converted.binance_trade_id = x_btc_outer.binance_trade_id
+    `)
+    } catch (err) {
+      console.log('error trying to update btc_usd column for: ', symbol, ' err: ', err);
+      return;
+    }
+    console.log('result:', result);
+    return result;
+  };
 
   return {
-    runBackfill
+    runBackfill,
+    test
   };
 };
 

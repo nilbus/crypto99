@@ -51,7 +51,7 @@ module.exports = (app) => {
           trade_time: app.pgPromise.as.date(new Date(trade.T), false),
           buyer_was_maker: trade.m,
           was_best_match: trade.M,
-          btc_usdt: null
+          btc_usdt: trade.btc_usdt
         }
       });
     }
