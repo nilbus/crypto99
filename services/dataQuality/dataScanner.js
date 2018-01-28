@@ -47,6 +47,7 @@ module.exports = (app) => {
       }
 
       const lastIdFromQuery = idRange[idRange.length - 1] && idRange[idRange.length - 1].binance_trade_id;
+      console.log('last Id from query: ', lastIdFromQuery);
       lastSequentialTradeId =  lastIdFromQuery || lastSequentialTradeId;
       await saveLastSequentialId(symbol, Math.min(lastSequentialTradeId, mostCurrentTradeId))
     }
@@ -66,9 +67,12 @@ module.exports = (app) => {
   };
 
   const findTradeGap = (idList) => {
-    for (let i = 1; i < idList.length; i++) {
+    const length = idList.length;
+
+    for (let i = 1; i < length; i++) {
       if (idList[i] - idList[i - 1] !== 1) return idList[i -1];
     }
+    if (length < 50003) return idList[length - 1];
     return false;
   };
 

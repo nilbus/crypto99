@@ -17,7 +17,7 @@ module.exports = (app) => {
       }
 
       const lastRetreivedId = values[values.length - 1].binance_trade_id;
-      console.log('DQ: last ID from binance api ', lastRetreivedId,  'Last sequential ID', this.lastKnownSequentialTradeIds[symbol]);
+      console.log('DQ: will scan rows after ', 10000 - (lastRetreivedId - this.lastKnownSequentialTradeIds[symbol]), 'more trades are saved. scanner is in progress: ', this.inProgress[symbol] );
       if ((lastRetreivedId - this.lastKnownSequentialTradeIds[symbol]) > 10000 && !this.inProgress[symbol]) {
         this.inProgress[symbol] = true;
         console.log('about to scan data:');
@@ -30,7 +30,6 @@ module.exports = (app) => {
     }
 
     async getLastSequentialTradeId(symbol) {
-      console.log('symbol: ', symbol);
       try {
         const lastSequential = await app.pg.query(`
           select last_sequential_trade_id

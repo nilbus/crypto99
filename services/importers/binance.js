@@ -172,7 +172,7 @@ module.exports = function (app) {
         SELECT binance_trade_id, price, quantity, trade_time, buyer_was_maker, was_best_match, btc_usdt
         FROM (
             select * from x_btc
-            JOIN LATERAL (
+            LEFT JOIN LATERAL (
               SELECT price as btc_usdt
               FROM binance_trades_btc_usdt AS btc_usd_inner
               WHERE x_btc.trade_time > btc_usd_inner.trade_time
