@@ -35,7 +35,7 @@ module.exports = class TradeEventEmitter extends EventEmitter {
     }
     const lastUSDTrade = this.usdMessageHistory[this.usdMessageHistory.length - 1];
     if (Math.abs(lastUSDTrade.data.T - message.data.T) > 30000) throw(30);
-    message.data.btc_usdt = lastUSDTrade.price;
+    message.data.btc_usdt = lastUSDTrade.data.p;
     return false;
   }
 
