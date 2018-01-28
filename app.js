@@ -29,9 +29,7 @@ const startUpSequence = async () => {
   const importersAPI = importers(app);
 
   const nodeEnv = process.env.NODE_ENV === 'production';
-  console.log('node env: ', process.env.NODE_ENV);
-  if (nodeEnv) {
-    console.log('starting systems');
+  if (false) {
     await dataStreamsAPI.binance.initiateSocket({symbols: ['btc_usdt'], name: 'usdWS'});
     await dataStreamsAPI.binance.initiateSocket({name: 'allWS'});
     importersAPI.binance.runBackfill({symbol: 'btc_usdt'});
