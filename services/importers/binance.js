@@ -134,7 +134,7 @@ module.exports = function (app) {
         }
 
         this.startId = values.reduce((num, trade) => Math.max(num, trade.binance_trade_id, this.lastSequentialTradeId), this.startId);
-        console.log('saved ', result.length, ' trades from binance. Total response from binance: ', values.length);
+        console.log('IMPORTERS: ', this.symbol, 'saved ', result.length, ' trades. Total response from binance: ', values.length);
         app.systemEvents.emit('importers/binance_saveTradeData', this.symbol, values);
       } catch (err) {
         console.log('something went wrong saving the trades received from binance', err);
