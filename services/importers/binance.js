@@ -12,9 +12,11 @@ module.exports = function (app) {
     backFiller.run();
     return {success: true};
   };
-//Date.parse("Fri Jan 05 2018 10:01:59 GMT-0500 (EST)")
-  // 1509548519000 <- Wed Nov 1 2017
-  //1509635159000 <- 4 minutes later
+
+  const stop = (inputs) => {
+    app.stopBackfill();
+    return {success: true};
+  };
 
   const Backfiller = class Backfill {
 
@@ -36,6 +38,11 @@ module.exports = function (app) {
       app.systemEvents.on('dataQuality/dataScanner_savedLastSequentialId', this.onNewLastSequentialId.bind(this));
       await this.getStartId();
       this.intervalId = setInterval(this.getAndSaveTransactions.bind(this), 3000);
+      app.stopBackfill = this.stop.bind(this);
+    }
+
+    stop() {
+      clearInterval(this.intervalId);
     }
 
     onNewLastSequentialId(symbol, tradeId) {
@@ -208,6 +215,7 @@ module.exports = function (app) {
 
 
   return {
-    runBackfill
+    runBackfill,
+    stop
   };
 };
