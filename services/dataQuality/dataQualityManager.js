@@ -17,8 +17,7 @@ module.exports = (app) => {
       }
 
       const lastRetreivedId = values[values.length - 1].binance_trade_id;
-      console.log('COMPARE: ', lastRetreivedId,  this.lastKnownSequentialTradeIds[symbol]);
-      console.log('COMPARE 3: ', !this.inProgress[symbol]);
+      console.log('DQ: last ID from binance api ', lastRetreivedId,  'Last sequential ID', this.lastKnownSequentialTradeIds[symbol]);
       if ((lastRetreivedId - this.lastKnownSequentialTradeIds[symbol]) > 10000 && !this.inProgress[symbol]) {
         this.inProgress[symbol] = true;
         console.log('about to scan data:');

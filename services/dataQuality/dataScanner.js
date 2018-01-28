@@ -25,27 +25,29 @@ module.exports = (app) => {
 
     while(lastSequentialTradeId < mostCurrentTradeId){
 
-      const endRange = lastSequentialTradeId + 100000;
       const idRange = await app.pg.query(`
         select binance_trade_id from $[tradesTable:name]
-        where binance_trade_id between $[lastSequentialTradeId] and $[endRange]
+        where binance_trade_id between $[startRange] and $[endRange]
         order by binance_trade_id asc
-      `, {tradesTable, lastSequentialTradeId, endRange});
+      `, {tradesTable, startRange: lastSequentialTradeId - 2, endRange: lastSequentialTradeId + 50000});
 
-      const tradeGapStartId = findTradeGap(idRange.map(trade => trade.binance_trade_id));
-      console.log('DATA SCANNER find trade gap result: ', tradeGapStartId);
+      let tradeGapStartId = findTradeGap(idRange.map(trade => trade.binance_trade_id));
+      console.log('DATA SCANNER: is trade gap?: ', tradeGapStartId);
+
+      // If there is a trade gap, save the start of the gap
       if (tradeGapStartId) {
+        tradeGapStartId -= 2; //minus 2 for safety
         try{
           await saveLastSequentialId(symbol, tradeGapStartId);
+          return {lastSequentialTradeId: tradeGapStartId};
         } catch(err) {
-          console.log('DATA SCANNER could not update last seq trade id: ', err);
+          console.log('DATA SCANNER: could not update last seq trade id: ', err);
           return {lastSequentialTradeId};
         }
-        return {lastSequentialTradeId: tradeGapStartId};
       }
 
-
-      lastSequentialTradeId = endRange;
+      const lastIdFromQuery = idRange[idRange.length - 1] && idRange[idRange.length - 1].binance_trade_id;
+      lastSequentialTradeId =  lastIdFromQuery || lastSequentialTradeId;
       await saveLastSequentialId(symbol, Math.min(lastSequentialTradeId, mostCurrentTradeId))
     }
 
@@ -54,13 +56,12 @@ module.exports = (app) => {
 
 
   const saveLastSequentialId = async(symbol, tradeId) => {
-    console.log('DATA SCANNER save new sequential trade Id: ', tradeId);
     await app.pg.query(`
       update currency_pairs
       set last_sequential_trade_id = $[tradeId]
       where symbol = $[symbol]
     `, {tradeId, symbol});
-
+    console.log('DATA SCANNER: saved new last_sequential_trade_id: ', tradeId);
     app.systemEvents.emit('dataQuality/dataScanner_savedLastSequentialId', symbol, tradeId);
   };
 

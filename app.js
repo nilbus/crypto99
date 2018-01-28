@@ -32,11 +32,8 @@ const startUpSequence = async () => {
   if (nodeEnv) {
     await dataStreamsAPI.binance.initiateSocket({symbols: ['btc_usdt'], name: 'usdWS'});
     await dataStreamsAPI.binance.initiateSocket({name: 'allWS'});
-    importersAPI.binance.runBackfill({symbol: 'eth_btc'});
-
+    importersAPI.binance.runBackfill({symbol: 'btc_usdt'});
   }
-
-
 
   app.mount('/importers', importersAPI);
 

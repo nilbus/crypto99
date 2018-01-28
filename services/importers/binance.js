@@ -111,15 +111,14 @@ module.exports = function (app) {
         quantity: parseFloat(trade.q),
         trade_time: app.pgPromise.as.date(new Date(trade.T), false),
         buyer_was_maker: trade.m,
-        was_best_match: trade.M,
-        trade_time_unix: trade.T
+        was_best_match: trade.M
       }));
     }
 
     async saveTradeData(values) {
 
       try {
-        console.time('save import trade data');
+
         let result;
         if (this.symbol === 'btc_usdt') {
           result = await this.saveUsdtTrades(values)
@@ -127,8 +126,6 @@ module.exports = function (app) {
           result = await this.saveNonUsdtTrades(values);
         }
 
-        console.timeEnd('save import trade data');
-        console.log('saved result: ', result);
         this.startId = values.reduce((num, trade) => Math.max(num, trade.binance_trade_id, this.lastSequentialTradeId), this.startId);
         console.log('saved ', result.length, ' trades from binance. Total response from binance: ', values.length);
         app.systemEvents.emit('importers/binance_saveTradeData', this.symbol, values);
@@ -140,7 +137,7 @@ module.exports = function (app) {
       }
     }
 
-    async saveUsdtTrades () {
+    async saveUsdtTrades (values) {
       const columns = ['binance_trade_id', 'price', 'quantity', 'trade_time', 'buyer_was_maker', 'was_best_match'];
       const tableName = this.tableName;
       let query = app.pgPromise.helpers.insert(values, columns, tableName);
@@ -151,41 +148,15 @@ module.exports = function (app) {
     async saveNonUsdtTrades (values) {
       if (this.symbol === 'btc_usdt') return;
 
-
-        /* result = await app.pg.query(`
-        UPDATE binance_trades_eth_btc AS x_btc_outer
-        SET btc_usdt = converted.USD
-        FROM (
-            SELECT
-              x_btc.binance_trade_id,
-              x_btc.price x,
-              btc_usd.price btc_USD,
-              x_btc.price * btc_usd.price USD,
-              x_btc.trade_time - btc_usd.trade_time AS time_diff
-            FROM binance_trades_eth_btc AS x_btc
-            JOIN LATERAL (
-              SELECT price, trade_time
-              FROM binance_trades_btc_usdt AS btc_usd_inner
-              WHERE x_btc.trade_time > btc_usd_inner.trade_time
-              ORDER BY btc_usd_inner.trade_time DESC
-              LIMIT 1
-            ) AS btc_usd ON true
-            WHERE x_btc.btc_usdt is null
-        ) AS converted
-        WHERE converted.binance_trade_id = x_btc_outer.binance_trade_id
-      `)*/
-//INSERT INTO binance_trades_eth_btc (binance_trade_id, price, quantity, trade_time, buyer_was_maker, was_best_match, btc_usdt)
-        //(1,3,3,now() - interval '1 day', true, true), (2,3,3,current_timestamp, true, true)
-
         const columns = ['binance_trade_id', 'price', 'quantity', 'trade_time', 'buyer_was_maker', 'was_best_match'];
         const dateCastedValues = values.map(row => {
           return {...row, trade_time: row.trade_time.replace(/'/g, '') + '::date'};
         });
         let sqlValues = app.pgPromise.helpers.values(dateCastedValues, columns);
+        //the single quote should not include the cast syntax
         sqlValues = sqlValues.replace(/::date'/g, '\'::date');
-        console.log('values: ', dateCastedValues[0]);
-        console.log('sql value: ', sqlValues.substr(0, 300));
-        const query2 =`
+
+        const query =`
         with x_btc as (
           select * from ( VALUES  $[sqlValues:raw])
               as values_table (binance_trade_id, price, quantity, trade_time, buyer_was_maker, was_best_match)
@@ -195,7 +166,7 @@ module.exports = function (app) {
         FROM (
             select * from x_btc
             JOIN LATERAL (
-              SELECT price as btc_usdt, trade_time as trade_time_USD
+              SELECT price as btc_usdt
               FROM binance_trades_btc_usdt AS btc_usd_inner
               WHERE x_btc.trade_time > btc_usd_inner.trade_time
               ORDER BY btc_usd_inner.trade_time DESC
@@ -205,7 +176,7 @@ module.exports = function (app) {
         ON conflict DO nothing returning binance_trade_id, btc_usdt
       `;
 
-      const query =`
+      const testQuery =`
         with x_btc as (
           select * from ( VALUES  $[sqlValues:raw])
               as values_table (binance_trade_id, price, quantity, trade_time, buyer_was_maker, was_best_match)
@@ -227,10 +198,7 @@ module.exports = function (app) {
       `;
 
       const variables = {sqlValues, tableName: this.tableName};
-       const result = await app.pg.query(query, variables);
-       console.log('result: ', result);
-
-       throw('no');
+       return await app.pg.query(query, variables);
     };
 
     recordError(error) {
@@ -239,11 +207,7 @@ module.exports = function (app) {
   };
 
 
-
   return {
     runBackfill
   };
 };
-
-//[{"a":1294,"p":"0.00002731","q":"231.00000000","f":1312,"l":1312,"T":1509634925284,"m":false,"M":true,"datePretty":"11-2-2017"},
-// {"a":1295,"p":"0.00002731","q":"3001.00000000","f":1313,"l":1313,"T":1509634946709,"m":false,"M":true,"datePretty":"11-2-2017"}
