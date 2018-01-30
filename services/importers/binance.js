@@ -5,10 +5,10 @@ module.exports = function (app) {
   const emailer = email(app);
 
   const runBackfill = (inputs) => {
-    // @params symbol: String
-    let {symbol} = inputs;
+    // @params symbol: String, startupQueue: [String]
+    let {symbol, startupQueue} = inputs;
 
-    const backFiller = new Backfiller(symbol);
+    const backFiller = new Backfiller(symbol, startupQueue);
     backFiller.run();
     return {success: true};
   };
@@ -20,7 +20,7 @@ module.exports = function (app) {
 
   const Backfiller = class Backfill {
 
-    constructor(symbol) {
+    constructor(symbol, startupQueue) {
       this.failCount = 0;
       this.maxFailCount = 1;
       this.saveFailCount = 0;
@@ -32,10 +32,12 @@ module.exports = function (app) {
       this.symbol = symbol;
       //symbol should come in as abc_def and binance wants it ABCDEF
       this.symbolForRequest = symbol.replace('_', '').toUpperCase();
+      this.startupQueue = startupQueue || [];
+      this.onNewLastSequentialId = this.onNewLastSequentialId.bind(this);
     }
 
     async run() {
-      app.systemEvents.on('dataQuality/dataScanner_savedLastSequentialId', this.onNewLastSequentialId.bind(this));
+      app.systemEvents.on('dataQuality/dataScanner_savedLastSequentialId', this.onNewLastSequentialId);
       await this.getStartId();
       this.intervalId = setInterval(this.getAndSaveTransactions.bind(this), 3000);
       app.stopBackfill = this.stop.bind(this);
@@ -45,8 +47,16 @@ module.exports = function (app) {
       clearInterval(this.intervalId);
     }
 
+    nextSymbol() {
+      app.systemEvents.removeListener('dataQuality/dataScanner_savedLastSequentialId', this.onNewLastSequentialId);
+      const symbol = this.startupQueue.shift();
+      if (!symbol) return;
+
+      runBackfill({symbol, startupQueue: this.startupQueue})
+    }
+
     onNewLastSequentialId(symbol, tradeId) {
-      console.log('IMPORTER: receieved new trade id from the scanner');
+      console.log('IMPORTER: receieved new last seq trade id from the scanner');
       if (symbol === this.symbol) this.lastSequentialTradeId = tradeId;
     }
 
@@ -79,6 +89,8 @@ module.exports = function (app) {
         clearInterval(this.intervalId);
         if (this.symbol === 'btc_usdt') this.updateUSDStatus();
         emailer.send({subject: this.symbol + ' finished', message: this.symbol + ' currency pair data importing is up to date'});
+
+        this.nextSymbol();
       }
 
       await this.saveTradeData(values);

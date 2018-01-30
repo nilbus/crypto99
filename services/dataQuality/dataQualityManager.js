@@ -18,7 +18,7 @@ module.exports = (app) => {
 
       const lastRetreivedId = values[values.length - 1].binance_trade_id;
       console.log('DQ: will scan rows after ', 10000 - (lastRetreivedId - this.lastKnownSequentialTradeIds[symbol]), 'more trades are saved. scanner is in progress: ', this.inProgress[symbol] );
-      if ((lastRetreivedId - this.lastKnownSequentialTradeIds[symbol]) > 10000 && !this.inProgress[symbol]) {
+      if ((lastRetreivedId - this.lastKnownSequentialTradeIds[symbol]) > 5000 && !this.inProgress[symbol]) {
         this.inProgress[symbol] = true;
         console.log('about to scan data:');
         const scanResult = await scanData({symbol});

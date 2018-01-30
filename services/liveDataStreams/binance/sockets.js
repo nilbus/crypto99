@@ -1,5 +1,5 @@
 const WebSocket = require('ws');
-
+const emailer = require('../../emailer');
 module.exports = (app) => {
 
   const restartSocket = async (input) => {
@@ -80,10 +80,14 @@ module.exports = (app) => {
       });
 
       ws.on('error', (error) => {
+        emailer.send({subject: 'Web Socket error', message: error.stack + ' \/n '});
         console.log('web socket error: ', error);
         app.tradeEvents.emit('error', error);
         ws.close(403, 'because');
         ws.terminate();
+
+        console.log('attempting to reconnect websocket: ', input.name);
+        initiateSocket({...input, oldWS: ws});
         reject(error);
       });
     });
