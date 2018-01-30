@@ -26,7 +26,7 @@ module.exports = (app) => {
             trade_time timestamp with time zone,
             buyer_was_maker boolean,
             was_best_match boolean,
-            btc_usd numeric
+            btc_usdt numeric
           )
         `, {tradeTable});
 
