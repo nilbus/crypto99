@@ -22,10 +22,10 @@ module.exports = (app) => {
 
   return class TradeHandler {
     constructor(options) {
-      const {priceChangeFilter, symbol} = options;
+      const {priceChangeFilterPct, symbol} = options;
 
       this.symbol = symbol;
-      this.priceChangeFilterPct = priceChangeFilter;
+      this.priceChangeFilterPct = priceChangeFilterPct;
       this.lastAnalyzedPrice = 0;
       this.handleMessage = this.handleMessage.bind(this);
     }
