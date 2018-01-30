@@ -10,6 +10,7 @@ const download = require('./services/download');
 const dataStreams = require('./services/liveDataStreams');
 const dataQuality = require('./services/dataQuality');
 const systemEvents = require('./services/systemEvents');
+const backTester = require('./services/backTester');
 const app = express();
 // adds the pg and pgp object to app
 db(app);
@@ -19,6 +20,7 @@ app.use(bodyParser.json());
 routeMgmt(app);
 app.systemEvents = systemEvents(app);
 
+backTester(app).backTesterData({symbol:'xrp_btc',begin_date:'2018-01-01 11:00:00',end_date:'2018-01-01 11:01:00'});
 const DataQualityMgr = dataQuality(app).DataQualityManager;
 const dataQualityMgr = new DataQualityMgr();
 dataQualityMgr.listenForSavedData();
