@@ -19,6 +19,7 @@ module.exports = (app) => {
     if (!symbols) {
       symbols = await app.pg.query(`
         select symbol from currency_pairs
+        where symbol != 'btc_usdt'
       `);
     }
 
@@ -39,6 +40,8 @@ module.exports = (app) => {
 
     return {success: true,};
   };
+
+  let retryCount = 0;
 
   const createWebSocket = (input, connectionUrl) => {
     return new Promise((resolve, reject) => {
@@ -69,14 +72,20 @@ module.exports = (app) => {
         // give some overlap to make sure new connection is receiving data before old one is closed
         if (input.oldWS) setTimeout(() => input.oldWS.terminate(), 5000);
         // 23 hours
-        setTimeout(() => initiateSocket({...input, oldWS: ws}), 82800000);
+        //setTimeout(() => initiateSocket({...input, oldWS: ws}), 82800000);
         //82800000
         resolve();
       });
 
       ws.on('close', () => {
-        console.log('ws was closed');
+        console.log(input.name, ' ws was closed');
         app.tradeEvents.emit('close', ws);
+        console.log('attempting to open another connection');
+        if (retryCount < 8) {
+          retryCount += 1;
+          initiateSocket({...input, oldWS: ws})
+        }
+
       });
 
       ws.on('error', (error) => {

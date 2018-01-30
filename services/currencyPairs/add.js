@@ -25,13 +25,14 @@ module.exports = (app) => {
             quantity numeric,
             trade_time timestamp with time zone,
             buyer_was_maker boolean,
-            was_best_match boolean
+            was_best_match boolean,
+            btc_usd numeric
           )
         `, {tradeTable});
 
         const result = yield transaction.one(`
           insert into currency_pairs (symbol, trade_table, exchange, last_sequential_trade_id)
-          values ($[symbol], $[tradeTable], $[exchange], 0)
+          values ($[symbol], $[tradeTable], $[exchange], 1)
           returning currency_pair_id
         `, {symbol, tradeTable, exchange});
 
