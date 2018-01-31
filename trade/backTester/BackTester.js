@@ -14,17 +14,15 @@ module.exports = (app) => {
     }
 
     async run({startTime, endTime, symbol}) {
-      const history = tradeHistory.createHistory({live: false, startTime});
+      const history = tradeHistory.createHistory({live: false, startTime, symbol});
 
       const tradeHandler = new TradeHandler(
         {live: false, priceChangeFilterPct: 0.005, symbol},
         history,
         decision);
-      //
-      //start data stream
 
       try{
-
+        //todo: format the timestamp to unix milliseconds
         const query = app.pgPromise.as.format(`
           SELECT * FROM $[tableName:name]
           WHERE trade_time > $[startTime]::date
@@ -36,18 +34,16 @@ module.exports = (app) => {
         writable_stream._write = function (chunk, enc, next) {
           console.log(chunk.binance_trade_id);
           tradeHandler.handleMessage({symbol, data: chunk});
+          history.handleMessage({symbol, data: chunk});
           next();
         };
 
         const qs = new QueryStream(query);
-        try{
-          const stats = await app.pg.stream(qs, stream => {
-            stream.pipe(writable_stream);
-          });
-        } catch(err) {
-          console.log('there was a problem streaming: ', err);
-          return {success: false};
-        }
+
+        await app.pg.stream(qs, stream => {
+          stream.pipe(writable_stream);
+        });
+
       }catch(e){
         console.log(e);
       }

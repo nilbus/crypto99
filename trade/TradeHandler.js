@@ -21,22 +21,27 @@ module.exports = (app) => {
   };
 
   return class TradeHandler {
-    constructor(options) {
+    constructor(options, history, decision, position) {
       const {priceChangeFilterPct, symbol} = options;
 
       this.symbol = symbol;
       this.priceChangeFilterPct = priceChangeFilterPct;
       this.lastAnalyzedPrice = 0;
       this.handleMessage = this.handleMessage.bind(this);
+
+      this.history = history;
+      this.decision = decision;
+      this.position = position;
     }
 
     handleMessage(message) {
       const symbol = message.symbol;
       const trade = formatTrade(message.data);
-      //ignore trades that don't change enough. todo: Override if it's been over 5 seconds
+      //ignore trades that don't change enough. todo: Override if it's been over 5 seconds or so
       if (Math.abs(trade.price / this.lastAnalyzedPrice) < this.priceChangeFilterPct) return;
       if (this.symbol !== symbol) return;
 
+      const theDecision = decision.make(message, history, position);
     }
 
   }

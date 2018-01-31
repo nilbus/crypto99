@@ -1,5 +1,8 @@
 module.exports = (app) => {
-  return () => {
-    return {trade: 'buy'};
+  return {
+    make(message, history, position) {
+      // run algorithm here
+      return {action: 'buy'};
+    }
   }
 };
