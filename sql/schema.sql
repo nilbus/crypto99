@@ -5,7 +5,8 @@ create table binance_trades_xrp_btc (
     quantity numeric,
     trade_time timestamp with time zone,
     buyer_was_maker boolean,
-    was_best_match boolean
+    was_best_match boolean,
+    btc_usd numeric
 )
 
 create table currency_pairs (
