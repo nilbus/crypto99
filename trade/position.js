@@ -19,7 +19,7 @@ module.exports = (app) => {
 
     buy(theDecision) {
       this.position.balanceUSD -= theDecision.quantityUSD;
-      const coinsBought = theDecision.quantityUSD / theDecision.trade.price;
+      const coinsBought = (theDecision.quantityUSD / theDecision.trade.price);
       this.position.balanceCoin += coinsBought;
       theDecision.executedPrice = theDecision.trade.price;
       theDecision.coinsBought = coinsBought;
@@ -30,17 +30,24 @@ module.exports = (app) => {
     sell(theDecision) {
       theDecision.positionsToSell.forEach(({thePosition}) => {
 
-        this.position.balanceCoin -= thePosition.coinsBought;
-        this.position.balanceUSD += (thePosition.coinsBought * theDecision.trade.price);
-
-        this.position.openPositions = this.position.openPositions
-          .filter(pos => pos.trade.binance_trade_id !== thePosition.trade.binance_trade_id);
-
         const transaction = {
           ...theDecision,
           positionsToSell: undefined,
           coinsSold: thePosition.coinsBought
         };
+
+        const dollarsFromSale = (transaction.coinsSold * theDecision.trade.price) * (1 - 0.0025); // <--Fees
+
+        this.position.balanceCoin -= transaction.coinsSold;
+        this.position.balanceUSD += dollarsFromSale;
+
+        this.position.openPositions = this.position.openPositions
+          .filter(pos => pos.trade.binance_trade_id !== thePosition.trade.binance_trade_id);
+
+        //calculate change for position
+        transaction.positionYield = (dollarsFromSale - thePosition.quantityUSD) / thePosition.quantityUSD;
+        transaction.balanceCoin = this.position.balanceCoin;
+        transaction.balanceUSD = this.position.balanceUSD;
 
         this.position.transactions.push(transaction);
 
