@@ -22,8 +22,8 @@ app.systemEvents = systemEvents(app);
 const BackTester = backTestModule(app);
 const test = new BackTester();
 
-test.run({symbol:'xrp_btc', startTime:'2018-01-01 11:00:00+00', endTime:'2018-01-01 11:01:00+00'});
-
+console.time('backTest');
+test.run({symbol:'xrp_btc', startTime:'2018-01-01 11:00:00+00', endTime:'2018-01-02 11:01:00+00'});
 
 const startUpSequence = async () => {
   const DataQualityMgr = dataQuality(app).DataQualityManager;

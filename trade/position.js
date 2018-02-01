@@ -19,12 +19,12 @@ module.exports = (app) => {
 
     buy(theDecision) {
       this.position.balanceUSD -= theDecision.quantityUSD;
-      const coinsBought = (theDecision.quantityUSD / theDecision.trade.price);
+      const coinsBought = (theDecision.quantityUSD / theDecision.trade.priceUSD);
       this.position.balanceCoin += coinsBought;
-      theDecision.executedPrice = theDecision.trade.price;
+      theDecision.executedPrice = theDecision.trade.priceUSD;
       theDecision.coinsBought = coinsBought;
       this.position.transactions.push(theDecision);
-      this.openPositions.push(theDecision);
+      this.position.openPositions.push(theDecision);
     },
 
     sell(theDecision) {
@@ -36,7 +36,7 @@ module.exports = (app) => {
           coinsSold: thePosition.coinsBought
         };
 
-        const dollarsFromSale = (transaction.coinsSold * theDecision.trade.price) * (1 - 0.0025); // <--Fees
+        const dollarsFromSale = (transaction.coinsSold * theDecision.trade.priceUSD) * (1 - 0.0025); // <--Fees
 
         this.position.balanceCoin -= transaction.coinsSold;
         this.position.balanceUSD += dollarsFromSale;

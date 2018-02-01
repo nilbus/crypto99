@@ -28,13 +28,13 @@ module.exports = (app) => {
           WHERE trade_time > $[startTime]
           AND trade_time < $[endTime]
           ORDER BY binance_trade_id ASC
-          limit 20;
         `, {startTime, endTime, tradeTable: `binance_trades_${symbol}`});
 
 
         console.log('query: ', query);
         const writable_stream = Writable({ objectMode: true }); // ({ decodeStrings: false })
         writable_stream._write = function (chunk, enc, next) {
+          chunk.priceUSD = chunk.price * chunk.btc_usdt;
           tradeHandler.handleMessage({symbol, data: chunk});
           // history.handleMessage({symbol, data: chunk});
           next();
@@ -45,6 +45,9 @@ module.exports = (app) => {
         await app.pg.stream(qs, stream => {
           stream.pipe(writable_stream);
         });
+
+        console.log(position.getPosition());
+        console.timeEnd('backTest');
 
       }catch(e){
         console.log('BACKTESTER ERROR: ',e);
