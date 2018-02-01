@@ -10,7 +10,7 @@ const download = require('./services/download');
 const dataStreams = require('./services/liveDataStreams');
 const dataQuality = require('./services/dataQuality');
 const systemEvents = require('./services/systemEvents');
-const backTester = require('./services/backTester');
+const backTestModule = require('./trade/backTester/BackTester');
 const app = express();
 // adds the pg and pgp object to app
 db(app);
@@ -19,13 +19,16 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 routeMgmt(app);
 app.systemEvents = systemEvents(app);
+const BackTester = backTestModule(app);
+const test = new BackTester();
 
-backTester(app).backTesterData({symbol:'xrp_btc',begin_date:'2018-01-01 11:00:00',end_date:'2018-01-01 11:01:00'});
-const DataQualityMgr = dataQuality(app).DataQualityManager;
-const dataQualityMgr = new DataQualityMgr();
-dataQualityMgr.listenForSavedData();
+test.run({symbol:'xrp_btc', startTime:'2018-01-01 11:00:00+00', endTime:'2018-01-01 11:01:00+00'});
+
 
 const startUpSequence = async () => {
+  const DataQualityMgr = dataQuality(app).DataQualityManager;
+  const dataQualityMgr = new DataQualityMgr();
+  dataQualityMgr.listenForSavedData();
 
   const dataStreamsAPI = dataStreams(app);
   const importersAPI = importers(app);
@@ -34,7 +37,7 @@ const startUpSequence = async () => {
   if (nodeEnv) {
     await dataStreamsAPI.binance.initiateSocket({symbols: ['btc_usdt'], name: 'usdWS'});
     await dataStreamsAPI.binance.initiateSocket({name: 'allWS'});
-    importersAPI.binance.runBackfill({symbol: 'btc_usdt', startupQueue: ['xrp_btc',  'eth_btc', 'neo_usdt']});
+    importersAPI.binance.runBackfill({symbol: 'btc_usdt', startupQueue: ['xrp_btc',  'eth_btc', 'neo_usdt', 'adx_btc', 'trx_btc']});
   }
 
   app.mount('/importers', importersAPI);
@@ -52,4 +55,4 @@ const startUpSequence = async () => {
   app.listen(port, () => console.log('server listening on port ', port));
 };
 
-startUpSequence();
+// startUpSequence();

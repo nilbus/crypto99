@@ -216,6 +216,31 @@ module.exports = function (app) {
      
       `;
 
+      const updateAllRowsWithLimit = `
+        UPDATE binance_trades_xrp_btc AS x_btc_outer
+        SET btc_usdt = converted.btc_USD
+        FROM (
+            SELECT
+              x_btc.binance_trade_id,
+              x_btc.price x,
+              btc_usd.price btc_USD,
+              x_btc.price * btc_usd.price USD,
+              x_btc.trade_time - btc_usd.trade_time AS time_diff
+            FROM binance_trades_xrp_btc AS x_btc
+            JOIN LATERAL (
+              SELECT price, trade_time
+              FROM binance_trades_btc_usdt AS btc_usd_inner
+              WHERE x_btc.trade_time > btc_usd_inner.trade_time
+              ORDER BY btc_usd_inner.trade_time DESC
+              LIMIT 1
+            ) AS btc_usd ON true
+            where x_btc.btc_usdt < 5
+            order by x_btc.binance_trade_id DESC
+            limit 500000
+        ) AS converted
+        WHERE converted.binance_trade_id = x_btc_outer.binance_trade_id
+      `;
+
       const variables = {sqlValues, tableName: this.tableName};
        return await app.pg.query(query, variables);
     };

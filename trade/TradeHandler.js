@@ -38,10 +38,15 @@ module.exports = (app) => {
       const symbol = message.symbol;
       const trade = formatTrade(message.data);
       //ignore trades that don't change enough. todo: Override if it's been over 5 seconds or so
-      if (Math.abs(trade.price / this.lastAnalyzedPrice) < this.priceChangeFilterPct) return;
+      const priceDiff = Math.abs(1 - (trade.price / this.lastAnalyzedPrice));
+      console.log('price diff since last decision: ', priceDiff);
+      if ( priceDiff < this.priceChangeFilterPct) return;
       if (this.symbol !== symbol) return;
 
-      const theDecision = decision.make(message, history, position);
+      this.lastAnalyzedPrice = trade.price;
+      const theDecision = this.decision.make(message, this.history, this.position);
+      this.position.processDecision(theDecision);
+      console.log('the decision is: ', theDecision);
     }
 
   }

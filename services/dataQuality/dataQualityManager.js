@@ -18,7 +18,7 @@ module.exports = (app) => {
 
       const lastRetreivedId = values[values.length - 1].binance_trade_id;
       console.log('DQ: will scan rows after ', 10000 - (lastRetreivedId - this.lastKnownSequentialTradeIds[symbol]), 'more trades are saved. scanner is in progress: ', this.inProgress[symbol] );
-      if ((lastRetreivedId - this.lastKnownSequentialTradeIds[symbol]) > 10000 && !this.inProgress[symbol]) {
+      if ((lastRetreivedId - this.lastKnownSequentialTradeIds[symbol]) > 4000 && !this.inProgress[symbol]) {
         this.inProgress[symbol] = true;
         console.log('about to scan data:');
         const scanResult = await scanData({symbol});
@@ -36,7 +36,7 @@ module.exports = (app) => {
           from currency_pairs
           where symbol = $[symbol]
         `, {symbol});
-        console.log('DQ: got last trade from db: ', lastSequential);
+        console.log('DQ: last_sequential_trade_id from db ', symbol,': ', lastSequential);
         return (lastSequential[0].last_sequential_trade_id || 1);
       } catch (err) {
         console.log('could not get last trade id in data quality manager');
