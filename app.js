@@ -11,6 +11,7 @@ const dataStreams = require('./services/liveDataStreams');
 const dataQuality = require('./services/dataQuality');
 const systemEvents = require('./services/systemEvents');
 const backTestModule = require('./trade/backTester/BackTester');
+const commandline = require('./commandline');
 const app = express();
 // adds the pg and pgp object to app
 db(app);
@@ -19,13 +20,15 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 routeMgmt(app);
 app.systemEvents = systemEvents(app);
-const BackTester = backTestModule(app);
-const test = new BackTester();
+commandline()(app);
+// const BackTester = backTestModule(app);
+// const test = new BackTester();
 
-console.time('backTest');
-test.run({symbol:'xrp_btc', startTime:'2018-01-01 11:00:00+00', endTime:'2018-01-02 11:01:00+00'});
+// console.time('backTest');
+// test.run({symbol:'xrp_btc', startTime:'2018-01-01 11:00:00+00', endTime:'2018-01-02 11:01:00+00'});
 
 const startUpSequence = async () => {
+
   const DataQualityMgr = dataQuality(app).DataQualityManager;
   const dataQualityMgr = new DataQualityMgr();
   dataQualityMgr.listenForSavedData();
