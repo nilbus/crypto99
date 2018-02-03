@@ -19,11 +19,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 routeMgmt(app);
 app.systemEvents = systemEvents(app);
-const BackTester = backTestModule(app);
-const test = new BackTester();
+//const BackTester = backTestModule(app);
+//const test = new BackTester();
 
-console.time('backTest');
-test.run({symbol:'xrp_btc', startTime:'2018-01-01 11:00:00+00', endTime:'2018-01-02 11:01:00+00'});
+//console.time('backTest');
+//test.run({symbol:'xrp_btc', startTime:'2018-01-01 11:00:00+00', endTime:'2018-01-02 11:01:00+00'});
 
 const startUpSequence = async () => {
   const DataQualityMgr = dataQuality(app).DataQualityManager;
@@ -33,12 +33,13 @@ const startUpSequence = async () => {
   const dataStreamsAPI = dataStreams(app);
   const importersAPI = importers(app);
 
-  const nodeEnv = process.env.NODE_ENV === 'production';
-  if (nodeEnv) {
-    await dataStreamsAPI.binance.initiateSocket({symbols: ['btc_usdt'], name: 'usdWS'});
-    await dataStreamsAPI.binance.initiateSocket({name: 'allWS'});
-    importersAPI.binance.runBackfill({symbol: 'btc_usdt', startupQueue: ['xrp_btc',  'eth_btc', 'neo_usdt', 'adx_btc', 'trx_btc']});
-  }
+  await dataStreamsAPI.binance.initiateSocket({symbols: ['btc_usdt'], name: 'usdWS'});
+  await dataStreamsAPI.binance.initiateSocket({name: 'allWS'});
+  importersAPI.binance.runBackfill({
+    symbol: 'btc_usdt',
+    startupQueue: ['xrp_btc',  'eth_btc', 'neo_usdt', 'adx_btc', 'trx_btc']
+  });
+
 
   app.mount('/importers', importersAPI);
 
@@ -55,4 +56,5 @@ const startUpSequence = async () => {
   app.listen(port, () => console.log('server listening on port ', port));
 };
 
-// startUpSequence();
+if (process.env.NODE_ENV === 'production') startUpSequence();
+console.log('you are not in production. Nothing will run');
