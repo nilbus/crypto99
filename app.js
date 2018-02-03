@@ -11,14 +11,18 @@ const dataStreams = require('./services/liveDataStreams');
 const dataQuality = require('./services/dataQuality');
 const systemEvents = require('./services/systemEvents');
 const backTestModule = require('./trade/backTester/BackTester');
+const cors = require('cors');
 const app = express();
 // adds the pg and pgp object to app
 db(app);
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+app.use(cors({origin: 'http://localhost:3000'}));
+
 routeMgmt(app);
 app.systemEvents = systemEvents(app);
+const importersAPI = importers(app);
 //const BackTester = backTestModule(app);
 //const test = new BackTester();
 
@@ -31,7 +35,6 @@ const startUpSequence = async () => {
   dataQualityMgr.listenForSavedData();
 
   const dataStreamsAPI = dataStreams(app);
-  const importersAPI = importers(app);
 
   await dataStreamsAPI.binance.initiateSocket({symbols: ['btc_usdt'], name: 'usdWS'});
   await dataStreamsAPI.binance.initiateSocket({name: 'allWS'});
@@ -39,22 +42,20 @@ const startUpSequence = async () => {
     symbol: 'btc_usdt',
     startupQueue: ['xrp_btc',  'eth_btc', 'neo_usdt', 'adx_btc', 'trx_btc']
   });
-
-
-  app.mount('/importers', importersAPI);
-
-  app.mount('/currencyPairs', currencyPairs(app));
-  app.mount('/download', download(app));
-
-  app.use(express.static(__dirname + '/react-app/build'));
-
-// app.get('/', function (req, res) {
-//   res.sendFile(__dirname + '/react-app/build/index.html');
-// });
-
-  const port = process.env.PORT || 7001;
-  app.listen(port, () => console.log('server listening on port ', port));
 };
 
 if (process.env.NODE_ENV === 'production') startUpSequence();
-console.log('you are not in production. Nothing will run');
+else console.log('YO: you are not in production. Nothing will run');
+
+app.mount('/importers', importersAPI);
+app.mount('/currencyPairs', currencyPairs(app));
+app.mount('/download', download(app));
+
+app.use(express.static(__dirname + '/react-app/build'));
+
+app.get('/', function (req, res) {
+  res.sendFile(__dirname + '/react-app/build/index.html');
+});
+
+const port = process.env.PORT || 7001;
+app.listen(port, () => console.log('server listening on port ', port));
